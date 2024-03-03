@@ -1,0 +1,98 @@
+# You can copy and paste this template into a new `.gitlab-ci.yml` file.
+# You should not add this template to an existing `.gitlab-ci.yml` file by using the `include:` keyword.
+#
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/C++.gitlab-ci.yml
+
+# use the official gcc image, based on debian
+# can use versions as well, like gcc:5.2
+# see https://hub.docker.com/_/gcc/
+
+image: gcc:latest
+
+variables:
+  GIT_STRATEGY: clone
+  DEV_USER: chron1c
+  DEV_APP_PATH: /home/chron1c/test_project
+
+stages:
+  - build
+  - test
+  - package
+  - deploy
+  - notify
+
+build:
+  stage: build
+  # instead of calling g++ directly you can also use some build toolkit like make
+  # install the necessary build tools when needed
+  before_script:
+    - dnf update && dnf -y install make autoconf
+  script:
+    - g++ helloworld.cpp -o mybinary
+  artifacts:
+    paths:
+      - mybinary
+      # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
+      # cache:
+      #   paths:
+      #     - "*.o"
+
+# run tests using the binary built before
+test:
+  stage: test
+  script:
+    - ./runmytests.sh
+
+package:
+  stage: package
+  script:
+    - echo "Packaging the object"
+    - tar -czvf hello_world.tar.gz mybinary 
+  artifacts:
+    paths:
+      - hello_world.tar.gz
+
+deploy:
+  stage: deploy
+  script:
+    - echo "Define your deployment script!"
+    - sudo scp hello_world.tar.gz chron1c@lowermogilevo:/home/chron1c/packaged_project
+    - sh ci-notify.sh ✓
+  environment: production
+  when: manual
+  only:
+    - main 
+
+
+notify:
+  stage: notify
+  before_script:
+    - sudo dnf install  mailx -y
+  script:
+    - echo "Notifying the team!"
+    - echo "Hello, world!" | mail -s "Deployment notification" scepterfoxtrot@gmail.com
+  when: always
+
+
+notify_error:
+  stage: notify
+  only:
+    - dev
+    - /^release\/.*$/
+    - master
+  script:
+    - sh ci-notify.sh ✘
+  when: on_failure
+
+notify_error_release:
+  stage: notify
+  only:
+    - /^release-.*$/
+  except:
+    - branches
+  script:
+    - sh ci-notify.sh ✘
+  when: on_failure

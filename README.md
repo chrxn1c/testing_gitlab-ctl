@@ -1,2 +1,3 @@
-# testing_gitlab-ctl
-project intended to test gitlab-ctl and telegram interaction
+# test_project
+
+project intended to use gitlab-ctl and telegram bot integration
